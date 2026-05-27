@@ -1,7 +1,7 @@
 import { pool } from "../../db"
 import type { IIssue } from "./issues.interface"
 
-const createIssueIntoDB = async (payload: any) => {
+const createIssueIntoDB = async (payload: IIssue) => {
 
     // console.log(payload)
 
@@ -17,13 +17,23 @@ const createIssueIntoDB = async (payload: any) => {
 
     const result = await pool.query(`
             INSERT INTO issues (title,description,reporter_id,type,status) VALUES($1,$2,$3,$4,$5) RETURNING *
-            `, [ title, description, reporter_id, type, status])
+            `, [title, description, reporter_id, type, status])
 
 
     return result
 
 }
 
+const getAllIssuesFromDB = async () => {
+
+
+    const result = await pool.query(`
+        SELECT * FROM issues
+        `)
+    return result
+}
+
 export const issueService = {
-    createIssueIntoDB
+    createIssueIntoDB,
+    getAllIssuesFromDB
 }
