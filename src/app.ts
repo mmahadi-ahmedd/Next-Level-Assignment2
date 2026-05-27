@@ -1,6 +1,7 @@
 import express, { type Application, type Request, type Response } from 'express'
-import { userRoute } from './modules/users/users.route'
 import { authRoute } from './modules/auth/auth.route'
+import { issuesRoute } from './modules/issues/issues.route'
+import { usersRoute } from './modules/users/users.route'
 const app: Application = express()
 
 app.use(express.json()) 
@@ -14,6 +15,7 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Hello World!' })
 })
 
-app.post("/api/users", userRoute );
 app.use("/api/auth", authRoute );
+app.use("/api/users", usersRoute );
+app.use("/api/issues", issuesRoute )
 export default app;
