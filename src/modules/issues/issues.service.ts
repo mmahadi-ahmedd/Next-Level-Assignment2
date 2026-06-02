@@ -2,6 +2,30 @@ import { pool } from "../../db"
 import type { Iuser } from "../users/users.interface"
 import type { IIssue } from "./issues.interface"
 
+
+// const createIssueIntoDB = async (payload: IIssue) => {
+//     const { title, description, type, reporter_id } = payload;
+
+//     const user = await pool.query(
+//         `SELECT id FROM users WHERE id = $1`,
+//         [reporter_id]
+//     );
+
+//     if (user.rows.length === 0) {
+//         throw new Error("User not found");
+//     }
+
+//     const result = await pool.query(
+//         `INSERT INTO issues
+//         (title, description, type, status, reporter_id)
+//         VALUES ($1, $2, $3, 'open', $4)
+//         RETURNING *`,
+//         [title, description, type, reporter_id]
+//     );
+
+//     return result;
+// };
+
 const createIssueIntoDB = async (payload: IIssue) => {
 
     // console.log(payload)
@@ -9,30 +33,23 @@ const createIssueIntoDB = async (payload: IIssue) => {
     const { title, description, reporter_id, type, status } = payload
 
     const user = await pool.query(`
-        SELECT * FROM users WHERE id=$1
+        SELECT id FROM users WHERE id=$1
         `, [reporter_id])
     // console.log(user)
     if (user.rows.length === 0) {
         throw new Error("User not found")
     }
+    // console.log(user)
 
     const result = await pool.query(`
-            INSERT INTO issues (title,description,reporter_id,type,status) VALUES($1,$2,$3,$4,$5) RETURNING *
-            `, [title, description, reporter_id, type, status])
+            INSERT INTO issues (title,description,reporter_id,type) VALUES($1,$2,$3,$4) RETURNING *
+            `, [title, description, user.rows[0].id, type])
+    // console.log(result)
 
 
     return result
 
 }
-
-// const getAllIssuesFromDB = async () => {
-
-
-//     const result = await pool.query(`
-//         SELECT * FROM issues
-//         `)
-//     return result
-// }
 
 
 const getAllIssuesFromDB = async () => {
@@ -76,7 +93,6 @@ const getSingleIssueFromDB = async (id: string) => {
         throw error;
     }
 
-    // Step 2: fetch reporter data separately
     const reporterResult = await pool.query(
         `SELECT id, name, email, role FROM users
          WHERE id = $1`,
@@ -85,10 +101,9 @@ const getSingleIssueFromDB = async (id: string) => {
 
     const reporter = reporterResult.rows[0] || null;
 
-    // Step 3: combine issue with reporter
     return {
         ...issue,
-        reporter 
+        reporter
     };
 };
 
@@ -131,24 +146,48 @@ const updateIssueInDB = async (
             throw error;
         }
     }
-    const { title, description, type } = payload;
+    const { title, description, type,status } = payload;
 
     const result = await pool.query<IIssue>(
         `UPDATE issues 
-         SET title = $1, description = $2, type = $3, updated_at = NOW()
-         WHERE id = $4
+         SET title = $1, description = $2, type = $3, status = $4, updated_at = NOW()
+         WHERE id = $5
          RETURNING *`,
-        [title, description, type, id]
+        [title, description, type, status, id]
     );
 
     return result.rows[0];
 };
 
+const deleteIssueFromDB = async (id: string, userRole: string) => {
 
+    if (userRole !== 'maintainer') {
+        const error: any = new Error('Only maintainers can delete issues');
+        error.status = 403;
+        throw error;
+    }
+
+    const issueResult = await pool.query<IIssue>(
+        `SELECT * FROM issues WHERE id = $1`, [id]
+    );
+
+    if (!issueResult.rows || issueResult.rows.length === 0) {
+        const error: any = new Error('Issue not found');
+        error.status = 404;
+        throw error;
+    }
+
+    const result = await pool.query<IIssue>(
+        `DELETE FROM issues WHERE id = $1 RETURNING *`, [id]
+    );
+
+    return result.rows[0];
+};
 
 export const issueService = {
     createIssueIntoDB,
     getAllIssuesFromDB,
     getSingleIssueFromDB,
-    updateIssueInDB
+    updateIssueInDB,
+    deleteIssueFromDB
 }
