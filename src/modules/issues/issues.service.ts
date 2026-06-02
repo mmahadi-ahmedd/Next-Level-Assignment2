@@ -147,11 +147,16 @@ const updateIssueInDB = async (
             throw error;
         }
     }
-    const { title, description, type,status } = payload;
+    const { title, description, type, status } = payload;
 
     const result = await pool.query<IIssue>(
-        `UPDATE issues 
-         SET title = $1, description = $2, type = $3, status = $4, updated_at = NOW()
+        `UPDATE issues
+         SET
+            title = COALESCE($1, title),
+            description = COALESCE($2, description),
+            type = COALESCE($3, type),
+            status = COALESCE($4, status),
+            updated_at = NOW()
          WHERE id = $5
          RETURNING *`,
         [title, description, type, status, id]
